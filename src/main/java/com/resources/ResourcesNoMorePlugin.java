@@ -1,6 +1,6 @@
 package com.resources;
 
-import com.google.common.annotations.VisibleForTesting;
+import com.google.gson.Gson;
 import com.google.inject.Provides;
 import javax.inject.Inject;
 
@@ -8,24 +8,23 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.lang.reflect.Array;
+import java.util.*;
 
+import net.runelite.api.gameval.ObjectID;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameObjectDespawned;
 import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
-import net.runelite.api.gameval.ObjectID;
-import net.runelite.client.callback.Hooks;
-import net.runelite.client.callback.RenderCallbackManager;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.plugins.groundmarkers.GroundMarkerPlugin;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.Text;
 
 @Slf4j
 @PluginDescriptor(
@@ -33,18 +32,158 @@ import net.runelite.client.ui.overlay.OverlayManager;
 )
 public class ResourcesNoMorePlugin extends Plugin
 {
+    private static final String CONFIG_GROUP = "resourceGroundMarker";
+    private static final String REGION_PREFIX = "resourceRegion_";
 
     boolean canAddTree = false;
     boolean canAddOre = false;
 
-    @Getter
+    private Collection<ResourceTile> depletedOreCollection = new Collection<>() {
+        @Override
+        public int size() {
+            return 0;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return false;
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            return false;
+        }
+
+        @Override
+        public Iterator<ResourceTile> iterator() {
+            return null;
+        }
+
+        @Override
+        public Object[] toArray() {
+            return new Object[0];
+        }
+
+        @Override
+        public <T> T[] toArray(T[] a) {
+            return null;
+        }
+
+        @Override
+        public boolean add(ResourceTile resourceTile) {
+            return false;
+        }
+
+        @Override
+        public boolean remove(Object o) {
+            return false;
+        }
+
+        @Override
+        public boolean containsAll(Collection<?> c) {
+            return false;
+        }
+
+        @Override
+        public boolean addAll(Collection<? extends ResourceTile> c) {
+            return false;
+        }
+
+        @Override
+        public boolean removeAll(Collection<?> c) {
+            return false;
+        }
+
+        @Override
+        public boolean retainAll(Collection<?> c) {
+            return false;
+        }
+
+        @Override
+        public void clear() {
+
+        }
+    };
+
+    private Collection<ResourceTile> depletedTreeCollection = new Collection<>() {
+        @Override
+        public int size() {
+            return 0;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return false;
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            return false;
+        }
+
+        @Override
+        public Iterator<ResourceTile> iterator() {
+            return null;
+        }
+
+        @Override
+        public Object[] toArray() {
+            return new Object[0];
+        }
+
+        @Override
+        public <T> T[] toArray(T[] a) {
+            return null;
+        }
+
+        @Override
+        public boolean add(ResourceTile resourceTile) {
+            return false;
+        }
+
+        @Override
+        public boolean remove(Object o) {
+            return false;
+        }
+
+        @Override
+        public boolean containsAll(Collection<?> c) {
+            return false;
+        }
+
+        @Override
+        public boolean addAll(Collection<? extends ResourceTile> c) {
+            return false;
+        }
+
+        @Override
+        public boolean removeAll(Collection<?> c) {
+            return false;
+        }
+
+        @Override
+        public boolean retainAll(Collection<?> c) {
+            return false;
+        }
+
+        @Override
+        public void clear() {
+
+        }
+    };
+
     private Set<Tile> depletedTrees = new HashSet<>();
 
-    @Getter
     private Set<Tile> depletedOres = new HashSet<>();
 
     @Inject
+    private Gson gson;
+
+    @Inject
     private OverlayManager overlayManager;
+
+    @Inject
+    private ConfigManager configManager;
 
     @Inject
     private Client client;
@@ -118,10 +257,12 @@ public class ResourcesNoMorePlugin extends Plugin
 
         final GameObject object = event.getGameObject();
 
-        log.debug(object.sizeX() + " " + object.sizeY());
+        int regionID = object.getWorldLocation().getRegionID();
+        log.debug("Object size: " + object.sizeX() + " " + object.sizeY());
         Tile tile = event.getTile();
 
-        log.debug(tile.getLocalLocation().toString());
+        log.debug("Object location: " + tile.getLocalLocation().toString());
+        log.debug("Object ID: " + object.getId());
 
         if (canAddOre)
         {
@@ -129,9 +270,95 @@ public class ResourcesNoMorePlugin extends Plugin
             canAddOre = false;
         }
 
+        ArrayList<Tile> treeTiles = new ArrayList<>();
+        treeTiles = getTiles(tile, object.sizeX(), object.sizeY());
+
+        /*
+        switch (object.sizeX())
+        {
+            case ObjectID.TREE:
+            case ObjectID.TREE2:
+            case ObjectID.TREE3:
+            case ObjectID.TREE4:
+            case ObjectID.TREE5:
+                treeTiles = getTiles(tile, 2, 2);
+                break;
+            case ObjectID.OAKTREE:
+            case ObjectID.OAK_TREE_1:
+            case ObjectID.OAK_TREE_2:
+            case ObjectID.OAK_TREE_3:
+                treeTiles = getTiles(tile, 3, 3);
+                break;
+        }
+        */
+
+
         if (canAddTree)
         {
-            Tile tile2 = new Tile() {
+            if (treeTiles != null) {
+                depletedTrees.addAll(treeTiles);
+            }
+            else
+            {
+                depletedTrees.add(tile);
+            }
+            canAddTree = false;
+            //Text.toCSV(depletedTrees.toString());
+        }
+
+
+        //log.debug(depletedGroundObjects.size() + "Before");
+        //depletedGroundObjects.add(tile.getGroundObject());
+        //log.debug(depletedGroundObjects.size() + "After");
+//        {
+//            if (hey != null) {
+//                log.debug("I've got: " + hey.getHash());
+//            }
+//        }
+
+        //if (client.getLocalPlayer().getWorldView().isTopLevel() && tile.getGameObjects()[0] != null)
+        {
+            //client.getLocalPlayer().getWorldView().getScene().removeGameObject(tile.);
+        }
+        //manager.drawTile(client.getLocalPlayer().getWorldView().getScene(), tile);
+        //manager.addEntity(object.getRenderable(), false);
+        //client.getWorldView(-1).getScene().removeGameObject(object);
+        //client.getLocalPlayer().getWorldView().getScene().removeGameObject(object);
+    }
+
+	@Provides
+    ResourcesNoMoreConfig provideConfig(ConfigManager configManager)
+	{
+		return configManager.getConfig(ResourcesNoMoreConfig.class);
+	}
+
+    public Set<Tile> getDepletedTrees() {
+        return depletedTrees;
+    }
+
+    public Set<Tile> getDepletedOres(){
+        return depletedOres;
+    }
+
+    private ArrayList<Tile> getTiles(Tile tile, int sizeX, int sizeY)
+    {
+        ArrayList<Tile> tiles = new ArrayList<Tile>();
+        tiles.add(tile);
+
+        LocalPoint lP = tile.getLocalLocation();
+        if (lP == null)
+        {
+            return null;
+        }
+
+        for (int x = 0; x < sizeX; x++)
+        {
+            for (int y = 0; y < sizeY; y++)
+            {
+                int finalX = x;
+                int finalY = y;
+
+                Tile newTile = new Tile() {
                 @Override
                 public DecorativeObject getDecorativeObject() {
                     return null;
@@ -184,7 +411,7 @@ public class ResourcesNoMorePlugin extends Plugin
 
                 @Override
                 public WorldPoint getWorldLocation() {
-                    return new WorldPoint(tile.getWorldLocation().getX(), tile.getWorldLocation().getY() + 1, tile.getPlane());
+                    return new WorldPoint(tile.getWorldLocation().getX() + finalX, tile.getWorldLocation().getY() + finalY, tile.getPlane());
                 }
 
                 @Override
@@ -217,75 +444,10 @@ public class ResourcesNoMorePlugin extends Plugin
                     return null;
                 }
             };
-            depletedTrees.add(tile);
-            depletedTrees.add(tile2);
-            canAddTree = false;
-        }
-
-        for (Tile tiles : depletedTrees)
-        {
-            log.debug("I am a tree at: " + tiles.getLocalLocation());
-        }
-        //log.debug(depletedGroundObjects.size() + "Before");
-        //depletedGroundObjects.add(tile.getGroundObject());
-        //log.debug(depletedGroundObjects.size() + "After");
-//        {
-//            if (hey != null) {
-//                log.debug("I've got: " + hey.getHash());
-//            }
-//        }
-
-        //if (client.getLocalPlayer().getWorldView().isTopLevel() && tile.getGameObjects()[0] != null)
-        {
-            //client.getLocalPlayer().getWorldView().getScene().removeGameObject(tile.);
-        }
-        //manager.drawTile(client.getLocalPlayer().getWorldView().getScene(), tile);
-        //manager.addEntity(object.getRenderable(), false);
-        //client.getWorldView(-1).getScene().removeGameObject(object);
-        //client.getLocalPlayer().getWorldView().getScene().removeGameObject(object);
-    }
-    @Subscribe
-    public void onGameObjectSpawned(GameObjectSpawned event)
-    {
-        if (client.getGameState() != GameState.LOGGED_IN)
-        {
-            return;
-        }
-        /*
-
-        final GameObject object = event.getGameObject();
-        Tile tile = event.getTile();
-        final WorldPoint location = object.getWorldLocation();
-        if (depletedTiles.contains(tile))
-        {
-            switch (object.getId())
-            {
-                case ObjectID.OAKTREE:
-                    log.debug("I'm a depleted oak at " + object.getWorldLocation().getX() + "  " + object.getWorldLocation().getY() + "  ");
-                case ObjectID.TREE:
-                    log.debug("I'm a depleted tree 1276 at " + object.getWorldLocation().getX() + "  " + object.getWorldLocation().getY() + "  ");
+                log.debug(newTile.getWorldLocation().toString());
+                tiles.add(newTile);
             }
-            log.debug("I'm a depleted node");
         }
-        else {
-            return;
-            //nada atm
-        }
-
-        */
-    }
-
-	@Provides
-    ResourcesNoMoreConfig provideConfig(ConfigManager configManager)
-	{
-		return configManager.getConfig(ResourcesNoMoreConfig.class);
-	}
-
-    public Set<Tile> getDepletedTrees() {
-        return depletedTrees;
-    }
-
-    public Set<Tile> getDepletedOres(){
-        return depletedOres;
+        return tiles;
     }
 }

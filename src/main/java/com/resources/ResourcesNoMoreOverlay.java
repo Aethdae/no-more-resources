@@ -30,7 +30,7 @@ public class ResourcesNoMoreOverlay extends Overlay {
     ResourcesNoMoreOverlay(Client client, ResourcesNoMorePlugin plugin, ResourcesNoMoreConfig config)
     {
         setPosition(OverlayPosition.DYNAMIC);
-        setLayer(OverlayLayer.UNDER_WIDGETS);
+        setLayer(OverlayLayer.ABOVE_SCENE);
         this.client = client;
         this.plugin = plugin;
         this.config = config;
@@ -63,11 +63,6 @@ public class ResourcesNoMoreOverlay extends Overlay {
                 for (Tile tile : trees)
                 {
                     WorldPoint wP = tile.getWorldLocation();
-                    LocalPoint lP = LocalPoint.fromWorld(client, wP);
-                    if (lP == null)
-                    {
-                        return null;
-                    }
 
                     for (GameObject gameObject : tile.getGameObjects())
                     {
@@ -81,11 +76,9 @@ public class ResourcesNoMoreOverlay extends Overlay {
                 }
             }
         }
-
-
-
         return null;
     }
+
 
     private void renderTile(final Graphics2D graphics, final Tile tile)
     {

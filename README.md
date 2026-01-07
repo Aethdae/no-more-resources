@@ -1,3 +1,4 @@
+#Resources No More!
 Plugin to keep track of any rocks and trees that the player gets, leaving them permanently marked.
 --
 Model Outline Color - Changes the outline of any objects that have been depleted.

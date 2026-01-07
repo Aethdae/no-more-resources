@@ -1,2 +1,2 @@
 # Example
-Plugin to remove any resource that the player interacts with, leaving only useless empty nodes in its place.
+Plugin to keep track of any rocks and trees that the player gets, leaving them permanently marked.

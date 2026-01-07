@@ -17,7 +17,6 @@ import java.util.*;
 
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.*;
-import net.runelite.api.coords.LocalPoint;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -45,6 +44,7 @@ public class ResourcesNoMorePlugin extends Plugin {
 
     boolean canAddTree = false;
     boolean canAddOre = false;
+    boolean canAddTile = false;
 
     @Inject
     private Gson gson;
@@ -124,6 +124,14 @@ public class ResourcesNoMorePlugin extends Plugin {
             canAddTree = true;
         }
     }
+    @Subscribe
+    public void onItemContainerChanged(ItemContainerChanged event)
+    {
+        if (client.getItemContainer(InventoryID.INVENTORY) == event.getItemContainer())
+        {
+            canAddTile = true;
+        }
+    }
 
     @Subscribe
     public void onGameObjectDespawned(GameObjectDespawned event) {
@@ -136,34 +144,41 @@ public class ResourcesNoMorePlugin extends Plugin {
         int regionID = object.getWorldLocation().getRegionID();
         Tile tile = event.getTile();
 
-        if (canAddOre) {
-            canAddOre = false;
-            List<ResourceTile> depletedRockCollection = new ArrayList<>(getDepletedRocksInRegion(regionID));
-
-            ResourceTile resourceTile = new ResourceTile(regionID, tile.getWorldLocation().getRegionX(), tile.getWorldLocation().getRegionY(), tile.getPlane());
-            if (!depletedRockCollection.contains(resourceTile)) {
-                depletedRockCollection.add(resourceTile);
-            }
-
-            log.debug(resourceTile.toString());
-            String json = gson.toJson(depletedRockCollection);
-            configManager.setConfiguration(CONFIG_GROUP + ROCK_GROUP, REGION_PREFIX + regionID, json);
-            loadRocks();
+        if (client.getLocalPlayer().getWorldLocation().distanceTo(event.getTile().getWorldLocation()) > 2)
+        {
+            return;
         }
+        if (canAddTile) {
+            if (canAddOre) {
+                canAddOre = false;
+                List<ResourceTile> depletedRockCollection = new ArrayList<>(getDepletedRocksInRegion(regionID));
 
-        if (canAddTree) {
-            canAddTree = false;
-            List<ResourceTile> depletedTreeCollection = new ArrayList<>(getDepletedTreesInRegion(regionID));
+                ResourceTile resourceTile = new ResourceTile(regionID, tile.getWorldLocation().getRegionX(), tile.getWorldLocation().getRegionY(), tile.getPlane());
+                if (!depletedRockCollection.contains(resourceTile)) {
+                    depletedRockCollection.add(resourceTile);
+                }
 
-            ResourceTile resourceTile = new ResourceTile(regionID, tile.getWorldLocation().getRegionX(), tile.getWorldLocation().getRegionY(), tile.getPlane());
-
-            if (!depletedTreeCollection.contains(resourceTile)) {
-                depletedTreeCollection.add(resourceTile);
+                log.debug(resourceTile.toString());
+                String json = gson.toJson(depletedRockCollection);
+                configManager.setConfiguration(CONFIG_GROUP + ROCK_GROUP, REGION_PREFIX + regionID, json);
+                loadRocks();
             }
-            log.debug(tile.toString());
-            String json = gson.toJson(depletedTreeCollection);
-            configManager.setConfiguration(CONFIG_GROUP + TREE_GROUP, REGION_PREFIX + regionID, json);
-            loadTrees();
+
+            if (canAddTree) {
+                canAddTree = false;
+                List<ResourceTile> depletedTreeCollection = new ArrayList<>(getDepletedTreesInRegion(regionID));
+
+                ResourceTile resourceTile = new ResourceTile(regionID, tile.getWorldLocation().getRegionX(), tile.getWorldLocation().getRegionY(), tile.getPlane());
+
+                if (!depletedTreeCollection.contains(resourceTile)) {
+                    depletedTreeCollection.add(resourceTile);
+                }
+                log.debug(tile.toString());
+                String json = gson.toJson(depletedTreeCollection);
+                configManager.setConfiguration(CONFIG_GROUP + TREE_GROUP, REGION_PREFIX + regionID, json);
+                loadTrees();
+            }
+            canAddTile = false;
         }
     }
     @Subscribe
@@ -174,7 +189,7 @@ public class ResourcesNoMorePlugin extends Plugin {
         for (ResourceTile tile : getDepletedRocksInRegion(region))
         {
             WorldPoint point = WorldPoint.fromRegion(tile.regionId, tile.regionX, tile.regionY, tile.z);
-            if (eventTile.getWorldLocation().equals(point))
+            if (eventTile.getWorldLocation().equals(point) && !rockTiles.contains(eventTile))
             {
                 rockTiles.add(eventTile);
             }
@@ -182,7 +197,7 @@ public class ResourcesNoMorePlugin extends Plugin {
         for (ResourceTile tile : getDepletedTreesInRegion(region))
         {
             WorldPoint point = WorldPoint.fromRegion(tile.regionId, tile.regionX, tile.regionY, tile.z);
-            if (eventTile.getWorldLocation().equals(point))
+            if (eventTile.getWorldLocation().equals(point) && !treeTiles.contains(eventTile))
             {
                 treeTiles.add(eventTile);
             }

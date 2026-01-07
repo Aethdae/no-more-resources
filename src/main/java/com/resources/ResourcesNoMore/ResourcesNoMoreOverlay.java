@@ -38,7 +38,7 @@ public class ResourcesNoMoreOverlay extends Overlay
 
     @Override
     public Dimension render(Graphics2D graphics) {
-        final int maxDistance = 40;
+        final int maxDistance = config.maxDistance();
         final Multimap<WorldView, ResourceTile> depletedTrees = plugin.getDepletedTrees();
         final Multimap<WorldView, ResourceTile> depletedRocks = plugin.getDepletedRocks();
         final ArrayList<Tile> treeTiles = plugin.treeTiles;

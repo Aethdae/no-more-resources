@@ -66,4 +66,13 @@ public interface ResourcesNoMoreConfig extends Config
     {
         return Color.GRAY;
     }
+    @ConfigItem(
+            keyName = "maxDistance",
+            name = "Max Render Distance",
+            description = "Max tiles to render away from the player"
+    )
+    default int maxDistance()
+    {
+        return 40;
+    }
 }

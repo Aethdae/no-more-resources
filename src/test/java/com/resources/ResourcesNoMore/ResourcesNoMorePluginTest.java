@@ -1,4 +1,4 @@
-package com.resources;
+package com.resources.ResourcesNoMore;
 
 import net.runelite.client.RuneLite;
 import net.runelite.client.externalplugins.ExternalPluginManager;

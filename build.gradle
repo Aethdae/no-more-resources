@@ -14,7 +14,7 @@ repositories {
 }
 
 def runeLiteVersion = 'latest.release'
-def pluginMainClass = 'com.resources.ResourcesNoMorePluginTest'
+def pluginMainClass = 'com.resources.ResourcesNoMore.ResourcesNoMorePluginTest'
 
 dependencies {
 	compileOnly group: 'net.runelite', name:'client', version: runeLiteVersion
@@ -27,7 +27,7 @@ dependencies {
 	testImplementation group: 'net.runelite', name:'jshell', version: runeLiteVersion
 }
 
-group = 'com.example'
+group = 'com.resources.ResourcesNoMore'
 version = '1.0-SNAPSHOT'
 
 tasks.withType(JavaCompile).configureEach {

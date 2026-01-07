@@ -15,6 +15,7 @@ import net.runelite.api.*;
 
 import java.util.*;
 
+import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.client.config.ConfigManager;
@@ -33,6 +34,9 @@ public class ResourcesNoMorePlugin extends Plugin {
 
     @Getter(AccessLevel.PACKAGE)
     public final Multimap<WorldView, ResourceTile> depletedRocks = ArrayListMultimap.create();
+
+    public final ArrayList<Tile> treeTiles = new ArrayList<>();
+    public final ArrayList<Tile> rockTiles = new ArrayList<>();
 
     private static final String CONFIG_GROUP = "resourceGroundMarker";
     private static final String ROCK_GROUP = "_Rock";
@@ -75,6 +79,8 @@ public class ResourcesNoMorePlugin extends Plugin {
         overlayManager.remove(overlay);
         depletedTrees.clear();
         depletedRocks.clear();
+        treeTiles.clear();
+        rockTiles.clear();
     }
 
     @Subscribe
@@ -87,6 +93,18 @@ public class ResourcesNoMorePlugin extends Plugin {
     public void onWorldViewUnloaded(WorldViewUnloaded event) {
         depletedRocks.removeAll(event.getWorldView());
         depletedTrees.removeAll(event.getWorldView());
+        rockTiles.clear();
+        treeTiles.clear();
+    }
+
+    @Subscribe
+    public void onGameStateChanged(GameStateChanged event)
+    {
+        if (event.getGameState() == GameState.HOPPING)
+        {
+            treeTiles.clear();
+            rockTiles.clear();
+        }
     }
 
     @Subscribe
@@ -148,28 +166,27 @@ public class ResourcesNoMorePlugin extends Plugin {
             loadTrees();
         }
     }
-
-    TileObject getTileObject(WorldView worldView, int x, int y, LocalPoint localPoint) {
-        int offset = worldView.getId() == WorldView.TOPLEVEL ? (Constants.EXTENDED_SCENE_SIZE - Constants.SCENE_SIZE) / 2 : 0;
-        x += offset;
-        y += offset;
-        Scene scene = worldView.getScene();
-        Tile[][][] tiles = scene.getTiles();
-        //log.debug("localpoint: " + localPoint.getX() + ", " +  localPoint.getY());
-        Tile tile = tiles[worldView.getPlane()][53][58];
-        if (tile != null) {
-            for (GameObject gameObject : tile.getGameObjects()) {
-                if (gameObject != null) {
-                    return gameObject;
-                }
-            }
-
-            GroundObject groundObject = tile.getGroundObject();
-            if (groundObject != null) {
-                return groundObject;
+    @Subscribe
+    public void onGameObjectSpawned(GameObjectSpawned event)
+    {
+        Tile eventTile = event.getTile();
+        int region = eventTile.getWorldLocation().getRegionID();
+        for (ResourceTile tile : getDepletedRocksInRegion(region))
+        {
+            WorldPoint point = WorldPoint.fromRegion(tile.regionId, tile.regionX, tile.regionY, tile.z);
+            if (eventTile.getWorldLocation().equals(point))
+            {
+                rockTiles.add(eventTile);
             }
         }
-        return null;
+        for (ResourceTile tile : getDepletedTreesInRegion(region))
+        {
+            WorldPoint point = WorldPoint.fromRegion(tile.regionId, tile.regionX, tile.regionY, tile.z);
+            if (eventTile.getWorldLocation().equals(point))
+            {
+                treeTiles.add(eventTile);
+            }
+        }
     }
 
     void loadTrees() {

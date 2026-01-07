@@ -15,9 +15,11 @@ import net.runelite.client.ui.overlay.OverlayUtil;
 import net.runelite.client.ui.overlay.outline.ModelOutlineRenderer;
 
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.List;
 
-public class ResourcesNoMoreOverlay extends Overlay {
+public class ResourcesNoMoreOverlay extends Overlay
+{
 
     private final Client client;
     private final ResourcesNoMorePlugin plugin;
@@ -25,8 +27,7 @@ public class ResourcesNoMoreOverlay extends Overlay {
     private final ModelOutlineRenderer modelOutlineRenderer;
 
     @Inject
-    ResourcesNoMoreOverlay(Client client, ResourcesNoMorePlugin plugin, ResourcesNoMoreConfig config, ModelOutlineRenderer modelOutlineRenderer)
-    {
+    ResourcesNoMoreOverlay(Client client, ResourcesNoMorePlugin plugin, ResourcesNoMoreConfig config, ModelOutlineRenderer modelOutlineRenderer) {
         setPosition(OverlayPosition.DYNAMIC);
         setLayer(OverlayLayer.ABOVE_SCENE);
         this.client = client;
@@ -34,53 +35,54 @@ public class ResourcesNoMoreOverlay extends Overlay {
         this.config = config;
         this.modelOutlineRenderer = modelOutlineRenderer;
     }
+
     @Override
-    public Dimension render(Graphics2D graphics)
-    {
+    public Dimension render(Graphics2D graphics) {
+        final int maxDistance = 40;
         final Multimap<WorldView, ResourceTile> depletedTrees = plugin.getDepletedTrees();
         final Multimap<WorldView, ResourceTile> depletedRocks = plugin.getDepletedRocks();
+        final ArrayList<Tile> treeTiles = plugin.treeTiles;
+        final ArrayList<Tile> rockTiles = plugin.rockTiles;
         final Player player = client.getLocalPlayer();
-        if (player == null)
-        {
+        if (player == null) {
             return null;
         }
-        if (config.removeRocks())
-        {
-            for (WorldView worldView : depletedRocks.keySet()) {
-                for (final ResourceTile rtile : depletedRocks.get(worldView)) {
-                    WorldPoint worldPoint = WorldPoint.fromRegion(rtile.getRegionId(), rtile.getRegionX(), rtile.getRegionY(), rtile.getZ());
-                    Scene scene = worldView.getScene();
-                    Tile[][][] tiles = scene.getTiles();
-
-                    if (worldPoint.getPlane() != worldView.getPlane())
+        if (config.removeRocks()) {
+            for (Tile tile : rockTiles) {
+                for(WorldView wV : depletedRocks.keySet())
+                {
+                    if (wV.contains(tile.getWorldLocation()))
                     {
-                        continue;
-                    }
-                    int z = worldView.getPlane();
-
-                    for (int x = 0; x < tiles[z].length; ++x)
-                    {
-                        for (int y = 0; y < tiles[z][x].length; ++y)
+                        if (player.getWorldLocation().distanceTo(tile.getWorldLocation()) < maxDistance)
                         {
-                            Tile tile = tiles[z][x][y];
-                            if (tile == null)
-                            {
-                                continue;
-                            }
-                            //for some reason just comparing the world points doesn't actually work? I am at a loss and
-                            //now have this abomination:
-                            if (worldPoint.getX() == tile.getWorldLocation().getX() && worldPoint.getY() == tile.getWorldLocation().getY() && worldPoint.getPlane() == tile.getPlane())
-                            {
-                                renderRocks(graphics, tile);
-                            }
+                            renderRocks(graphics, tile);
+                        }
+                    }
+                }
+            }
+        }
+        if (config.removeTrees()) {
+            for (Tile tile : treeTiles) {
+                for(WorldView wV : depletedTrees.keySet())
+                {
+                    if (wV.contains(tile.getWorldLocation()))
+                    {
+                        if (player.getWorldLocation().distanceTo(tile.getWorldLocation()) < maxDistance) {
+                            renderTrees(graphics, tile);
                         }
                     }
                 }
             }
         }
 
-        if (config.removeTrees())
-        {
+        return null;
+    }
+
+        /*
+        Leaving this old abomination in as an example of what you don't do. I was tired and frustrated and settled on a
+        working brute force method, but that is not the correct way.
+         */
+            /*
             for (WorldView worldView : depletedTrees.keySet()) {
                 for (final ResourceTile rtile : depletedTrees.get(worldView)) {
                     Scene scene = worldView.getScene();
@@ -113,18 +115,15 @@ public class ResourcesNoMoreOverlay extends Overlay {
                 }
             }
         }
-        return null;
-    }
 
-    private void renderRocks(final Graphics2D graphics, Tile tile)
+             */
+
+    private void renderRocks ( final Graphics2D graphics, Tile tile)
     {
         GameObject[] gameObjects = tile.getGameObjects();
-        if (gameObjects != null)
-        {
-            for (GameObject gameObject : gameObjects)
-            {
-                if (gameObject != null && gameObject.getSceneMinLocation().equals(tile.getSceneLocation()))
-                {
+        if (gameObjects != null) {
+            for (GameObject gameObject : gameObjects) {
+                if (gameObject != null && gameObject.getSceneMinLocation().equals(tile.getSceneLocation())) {
                     if (!config.removeTiles()) {
                         OverlayUtil.renderTileOverlay(graphics, gameObject, "", config.tileColor());
                     }
@@ -136,15 +135,12 @@ public class ResourcesNoMoreOverlay extends Overlay {
         }
     }
 
-    private void renderTrees(final Graphics2D graphics, Tile tile)
+    private void renderTrees ( final Graphics2D graphics, Tile tile)
     {
         GameObject[] gameObjects = tile.getGameObjects();
-        if (gameObjects != null)
-        {
-            for (GameObject gameObject : gameObjects)
-            {
-                if (gameObject != null && gameObject.getSceneMinLocation().equals(tile.getSceneLocation()))
-                {
+        if (gameObjects != null) {
+            for (GameObject gameObject : gameObjects) {
+                if (gameObject != null && gameObject.getSceneMinLocation().equals(tile.getSceneLocation())) {
                     if (!config.removeTiles()) {
                         OverlayUtil.renderTileOverlay(graphics, gameObject, "", config.tileColor());
                     }
@@ -155,5 +151,4 @@ public class ResourcesNoMoreOverlay extends Overlay {
             }
         }
     }
-
 }

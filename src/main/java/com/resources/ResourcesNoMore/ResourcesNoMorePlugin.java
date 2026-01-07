@@ -100,7 +100,7 @@ public class ResourcesNoMorePlugin extends Plugin {
     @Subscribe
     public void onGameStateChanged(GameStateChanged event)
     {
-        if (event.getGameState() == GameState.HOPPING)
+        if (event.getGameState() == GameState.HOPPING || event.getGameState() == GameState.LOADING)
         {
             treeTiles.clear();
             rockTiles.clear();

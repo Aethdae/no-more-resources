@@ -67,6 +67,8 @@ public class ResourcesNoMoreOverlay extends Overlay {
                             {
                                 continue;
                             }
+                            //for some reason just comparing the world points doesn't actually work? I am at a loss and
+                            //now have this abomination:
                             if (worldPoint.getX() == tile.getWorldLocation().getX() && worldPoint.getY() == tile.getWorldLocation().getY() && worldPoint.getPlane() == tile.getPlane())
                             {
                                 renderRocks(graphics, tile);
